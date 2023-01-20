@@ -20,7 +20,7 @@ else:
 
 class DAdaptAdam(torch.optim.Optimizer):
     r"""
-    Implements Adam with DLB step size. Leave LR set to 1 unless you encounter instability.
+    Implements Adam with D-adaptation automatic step-sizes. Leave LR set to 1 unless you encounter instability.
     Arguments:
         params (iterable): 
             Iterable of parameters to optimize or dicts defining parameter groups.
