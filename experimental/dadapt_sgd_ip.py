@@ -157,10 +157,5 @@ class DadaptSGD(torch.optim.Optimizer):
 
             group['k'] = k + 1
 
-        self.loggables['d'] = d
-        self.loggables['dlr'] = d*lr
-        self.loggables['d_hat'] = d_hat
-        self.loggables['gsq_weighted'] = gsq_weighted
-        self.loggables['sk_sq'] = sk_sq
         return loss
 
