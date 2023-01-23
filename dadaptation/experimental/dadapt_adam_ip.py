@@ -153,9 +153,11 @@ class DAdaptAdamIP(torch.optim.Optimizer):
             ######
 
         numerator_weighted = beta2*numerator_weighted + (1-beta2)*numerator_acum
-
-        d_hat = 2*(beta2/(1-beta2))*numerator_weighted/sk_l1
-        d = max(d, min(d_hat, d*growth_rate))
+        d_hat = d
+        
+        if lr > 0.0:
+            d_hat = 2*(beta2/(1-beta2))*numerator_weighted/sk_l1
+            d = max(d, min(d_hat, d*growth_rate))
 
         if log_every > 0 and k % log_every == 0:
             print(f"ng: {ngroups} lr: {lr} dlr: {dlr} d_hat: {d_hat}, d: {d}. sk_l1={sk_l1:1.1e} numerator_weighted={numerator_weighted:1.1e}")

@@ -156,9 +156,11 @@ class DAdaptAdam(torch.optim.Optimizer):
             ######
 
         gsq_weighted = beta2*gsq_weighted + g_sq*(dlr**2)*(1-beta2)
+        d_hat = d
 
-        d_hat = (sksq_weighted/(1-beta2) - gsq_weighted)/sk_l1
-        d = max(d, min(d_hat, d*growth_rate))
+        if lr > 0.0:
+            d_hat = (sksq_weighted/(1-beta2) - gsq_weighted)/sk_l1
+            d = max(d, min(d_hat, d*growth_rate))
 
         if log_every > 0 and k % log_every == 0:
             print(f"ng: {ngroups} lr: {lr} dlr: {dlr} d_hat: {d_hat}, d: {d}. sksq_weighted={sksq_weighted:1.1e} sk_l1={sk_l1:1.1e} gsq_weighted={gsq_weighted:1.1e}")

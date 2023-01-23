@@ -192,8 +192,9 @@ class DAdaptAdaGrad(torch.optim.Optimizer):
         gsq_weighted = gsq_weighted + dlr*dlr*g_sq
         d_hat = d
         
-        d_hat = (sksq_weighted - gsq_weighted)/skl1
-        d = group['d'] = max(d, min(d_hat, d*growth_rate))
+        if lr > 0.0:
+            d_hat = (sksq_weighted - gsq_weighted)/skl1
+            d = group['d'] = max(d, min(d_hat, d*growth_rate))
 
         if log_every > 0 and k % log_every == 0:
             print(f"d_hat: {d_hat}, d: {d}. sksq_weighted={sksq_weighted:1.1e} skl1={skl1:1.1e} gsq_weighted={gsq_weighted:1.1e} lr={lr}")

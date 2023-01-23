@@ -127,9 +127,11 @@ class DadaptSGDIP(torch.optim.Optimizer):
             ######
 
         numerator_weighted += numerator_acum
+        d_hat = d
 
-        d_hat = 2*numerator_weighted/math.sqrt(sk_sq)
-        d = group['d'] = max(d, min(d_hat, d*growth_rate))
+        if lr > 0.0:
+            d_hat = 2*numerator_weighted/math.sqrt(sk_sq)
+            d = group['d'] = max(d, min(d_hat, d*growth_rate))
 
         if log_every > 0 and k % log_every == 0:
             print(f"(r={self.rank},k={k}) dlr: {dlr} d_hat: {d_hat}, d: {d}. sk_norm={math.sqrt(sk_sq)} numerator_acum={numerator_acum} g0_norm={g0_norm}", flush=True)
