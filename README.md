@@ -6,7 +6,7 @@ Learning rate free learning for SGD, AdaGrad and Adam!
 
 ## Details
 
-The provided Pytorch Optimizer classes are drop-in replacements, either copy into your project or use via dadaptation.DadaptSGD,  dadaptation.DadaptAdam or dadaptation.DadaptAdaGrad.
+The provided Pytorch Optimizer classes are drop-in replacements, either copy into your project or use via dadaptation.DadaptSGD,  dadaptation.DAdaptAdam or dadaptation.DAdaptAdaGrad.
 
  - **Set the LR parameter to 1.0**. This parameter is not ignored, rather, setting it larger to smaller will directly scale up or down the D-adapted learning rate. 
  - **Use the same learning rate scheduler you would normally use on the problem.**
