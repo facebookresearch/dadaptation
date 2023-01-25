@@ -9,9 +9,9 @@ import torch.optim
 import pdb
 import math
 
-class DadaptSGD(torch.optim.Optimizer):
+class DAdaptSGD(torch.optim.Optimizer):
     r"""
-    Implements SGD with D-adaptation automatic step-sizes. Leave LR set to 1 unless you encounter instability.
+    Implements SGD with D-Adaptation automatic step-sizes. Leave LR set to 1 unless you encounter instability.
     Arguments:
         params (iterable): 
             Iterable of parameters to optimize or dicts defining parameter groups.
