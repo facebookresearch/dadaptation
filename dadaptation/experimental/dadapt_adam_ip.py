@@ -20,7 +20,13 @@ else:
 
 class DAdaptAdamIP(torch.optim.Optimizer):
     r"""
-    Implements Adam with D-adaptation automatic step-sizes. Leave LR set to 1 unless you encounter instability.
+    Implements Adam with D-Adaptation automatic step-sizes. 
+    Leave LR set to 1 unless you encounter instability.
+
+    This IP variant uses a tighter bound than the non-IP version,
+    and so will typically choose larger step sizes. It has not 
+    been as extensively tested.
+    
     Arguments:
         params (iterable): 
             Iterable of parameters to optimize or dicts defining parameter groups.

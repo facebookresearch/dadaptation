@@ -9,9 +9,11 @@ import torch.optim
 import pdb
 import math
 
-class DadaptSGDIP(torch.optim.Optimizer):
+class DAdaptSGDIP(torch.optim.Optimizer):
     r"""
-    Implements Adam with D-adaptation automatic step-sizes. Leave LR set to 1 unless you encounter instability.
+    Implements Adam with D-Adaptation automatic step-sizes. Leave LR set to 1 unless you encounter instability.
+    Unlike the AdamIP variant, this IP variant is computing almost exactly the same bound, and should perform 
+    similarly to the non-IP version.
     Arguments:
         params (iterable): 
             Iterable of parameters to optimize or dicts defining parameter groups.
