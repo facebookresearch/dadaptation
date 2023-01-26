@@ -11,7 +11,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="dadaptation",
-    version="1.4",
+    version="1.5",
     author="Aaron Defazio",
     author_email="adefazio@meta.com",
     description="Learning Rate Free Learning for Adam, SGD and AdaGrad",
