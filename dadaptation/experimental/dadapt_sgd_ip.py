@@ -75,25 +75,25 @@ class DAdaptSGDIP(torch.optim.Optimizer):
         
         sk_sq = 0.0
 
+        g_sq = 0.0
+        for group in self.param_groups:
+            for p in group['params']:
+                if p.grad is None:
+                    continue
+                grad = p.grad.data
+                
+                # Apply weight decay
+                if decay != 0:
+                    if grad.is_sparse:
+                        raise RuntimeError("weight_decay option is not compatible with sparse gradients")
+
+                    grad.add(p.data, alpha=decay)
+
+                state = self.state[p]
+
+                g_sq += (grad * grad).sum().item()
+
         if k == 0: 
-            g_sq = 0.0
-            for group in self.param_groups:
-                for p in group['params']:
-                    if p.grad is None:
-                        continue
-                    grad = p.grad.data
-                    
-                    # Apply weight decay
-                    if decay != 0:
-                        if grad.is_sparse:
-                            raise RuntimeError("weight_decay option is not compatible with sparse gradients")
-
-                        grad.add(p.data, alpha=decay)
-
-                    state = self.state[p]
-
-                    g_sq += (grad * grad).sum().item()
-
             group['g0_norm'] = g0_norm = math.sqrt(g_sq)
 
         g0_norm = group['g0_norm']
@@ -112,13 +112,6 @@ class DAdaptSGDIP(torch.optim.Optimizer):
                     z = state['z'] = torch.clone(p.data).detach()
                     s = state['s'] = torch.zeros_like(p.data).detach()
                     x0 = state['x0'] = torch.clone(p.data).detach()
-
-                    # Apply weight decay
-                    if decay != 0:
-                        if grad.is_sparse:
-                            raise RuntimeError("weight_decay option is not compatible with sparse gradients")
-
-                        grad.add_(p.data, alpha=decay)
 
                 s = state['s']
 
