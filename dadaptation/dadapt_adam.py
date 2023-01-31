@@ -18,6 +18,12 @@ if TYPE_CHECKING:
 else:
     _params_t = Any
 
+def to_real(x):
+    if torch.is_complex(x):
+        return x.real
+    else:
+        return x
+
 class DAdaptAdam(torch.optim.Optimizer):
     r"""
     Implements Adam with D-Adaptation automatic step-sizes. Leave LR set to 1 unless you encounter instability.
@@ -131,26 +137,27 @@ class DAdaptAdam(torch.optim.Optimizer):
                 # State initialization
                 if 'step' not in state:
                     state['step'] = 0
-                    state['s'] = torch.zeros_like(p.data).detach()
+                    state['s'] = torch.zeros_like(p.data, memory_format=torch.preserve_format).detach()
                     # Exponential moving average of gradient values
-                    state['exp_avg'] = torch.zeros_like(p.data).detach()
+                    state['exp_avg'] = torch.zeros_like(p.data, memory_format=torch.preserve_format).detach()
                     # Exponential moving average of squared gradient values
-                    state['exp_avg_sq'] = torch.zeros_like(p.data).detach()
+                    state['exp_avg_sq'] = torch.zeros_like(to_real(p.data), memory_format=torch.preserve_format).detach()
 
                 exp_avg, exp_avg_sq = state['exp_avg'], state['exp_avg_sq']
                 
+                grad_grad = to_real(grad * grad.conj())
 
                 # Adam EMA updates
                 exp_avg.mul_(beta1).add_(grad, alpha=dlr*(1-beta1))
-                exp_avg_sq.mul_(beta2).addcmul_(grad, grad, value=1-beta2)
+                exp_avg_sq.mul_(beta2).add_(grad_grad, alpha=1-beta2)
                 
                 denom = exp_avg_sq.sqrt().add_(eps)
 
-                g_sq += (grad * grad).div_(denom).sum().item()
+                g_sq += grad_grad.div_(denom).sum().item()
 
                 s = state['s']
                 s.mul_(beta2).add_(grad, alpha=dlr*(1-beta2))
-                sksq_weighted += (s * s).div_(denom).sum().item()
+                sksq_weighted += to_real(s * s.conj()).div_(denom).sum().item()
                 sk_l1 += s.abs().sum().item()
 
             ######
@@ -185,6 +192,7 @@ class DAdaptAdam(torch.optim.Optimizer):
                 state['step'] += 1
 
                 denom = exp_avg_sq.sqrt().add_(eps)
+                denom = denom.type(p.type())
 
                 # Apply weight decay (decoupled variant)
                 if decay != 0 and decouple:
