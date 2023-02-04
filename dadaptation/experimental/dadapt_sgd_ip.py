@@ -137,6 +137,11 @@ class DAdaptSGDIP(torch.optim.Optimizer):
         numerator_weighted += numerator_acum
         d_hat = d
 
+        # if we have not done any updates
+        # if we have any gradients available, will have sk_sq > 0 (unless \|g\|=0)
+        if sk_sq == 0:
+            return loss
+
         if lr > 0.0:
             d_hat = 2*numerator_weighted/math.sqrt(sk_sq)
             d = group['d'] = max(d, min(d_hat, d*growth_rate))

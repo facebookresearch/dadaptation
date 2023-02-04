@@ -162,6 +162,11 @@ class DAdaptAdamIP(torch.optim.Optimizer):
 
         numerator_weighted = beta2*numerator_weighted + (1-beta2)*numerator_acum
         d_hat = d
+
+        # if we have not done any progres, return
+        # if we have any gradients available, will have sk_l1 > 0 (unless \|g\|=0)
+        if sk_l1 == 0:
+            return loss
         
         if lr > 0.0:
             d_hat = 2*(beta2/(1-beta2))*numerator_weighted/sk_l1
