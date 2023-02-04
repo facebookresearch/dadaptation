@@ -70,7 +70,6 @@ class DAdaptAdam(torch.optim.Optimizer):
         if decouple:
             print(f"Using decoupled weight decay")
 
-        
         defaults = dict(lr=lr, betas=betas, eps=eps,
                         weight_decay=weight_decay,
                         d = d0, 
@@ -166,6 +165,11 @@ class DAdaptAdam(torch.optim.Optimizer):
 
         gsq_weighted = beta2*gsq_weighted + g_sq*(dlr**2)*(1-beta2)
         d_hat = d
+
+        # if we have not done any progres, return
+        # if we have any gradients available, will have sk_l1 > 0 (unless \|g\|=0)
+        if sk_l1 == 0:
+            return loss
 
         if lr > 0.0:
             d_hat = (sksq_weighted/(1-beta2) - gsq_weighted)/sk_l1
