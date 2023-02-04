@@ -38,6 +38,12 @@ class DAdaptSGD(torch.optim.Optimizer):
         weight_decay=0, 
         log_every=0,
         d0=1e-6, growth_rate=float('inf')):
+
+        if not 0.0 < d0:
+            raise ValueError("Invalid d0 value: {}".format(d0))
+        if not 0.0 < lr:
+            raise ValueError("Invalid learning rate: {}".format(lr))
+
         defaults = dict(lr=lr,
             momentum=momentum, 
             weight_decay=weight_decay, k=0,
@@ -68,7 +74,6 @@ class DAdaptSGD(torch.optim.Optimizer):
         gsq_weighted = group['gsq_weighted']
         growth_rate = group['growth_rate']
         d = group['d']
-        
 
         g_sq = 0.0
         sk_sq = 0.0

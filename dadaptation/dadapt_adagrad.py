@@ -30,7 +30,7 @@ class DAdaptAdaGrad(torch.optim.Optimizer):
         weight_decay (float): 
             Weight decay, i.e. a L2 penalty (default: 0).
         eps (float): 
-            Term added to the denominator outside of the root operation to improve numerical stability. (default: 0).
+            Term added to the denominator outside of the root operation to improve numerical stability. (default: 1e-6).
         d0 (float):
             Initial D estimate for D-adaptation (default 1e-6). Rarely needs changing.
         growth_rate (float):
@@ -47,11 +47,14 @@ class DAdaptAdaGrad(torch.optim.Optimizer):
         eps: float = 0.0,
         d0 = 1e-6, growth_rate=float('inf')
     ):
+        if d0 <= 0:
+            raise ValueError("Invalid d0 value: {}".format(d0))
         if lr <= 0:
             raise ValueError(f"Learning rate {lr} must be positive")
         if momentum < 0:
             raise ValueError(f"Momentum {momentum} must be non-negative")
-
+        if eps <= 0:
+            raise ValueError("Invalid epsilon value: {}".format(eps))
 
         defaults = dict(lr=lr, 
             momentum=momentum,
