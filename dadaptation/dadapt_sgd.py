@@ -95,6 +95,10 @@ class DAdaptSGD(torch.optim.Optimizer):
 
                 g_sq += (grad * grad).sum().item()
 
+        # if we have not done any updates
+        # if we have any gradients available, will have g_sq > 0 (unless \|g\|=0)
+        if g_sq == 0:
+            return loss
 
         group = self.param_groups[0]
         if k == 0: 
