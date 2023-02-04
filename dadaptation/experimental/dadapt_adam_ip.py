@@ -56,9 +56,11 @@ class DAdaptAdamIP(torch.optim.Optimizer):
                  weight_decay=0, log_every=0,
                  decouple=False,
                  d0=1e-6, growth_rate=float('inf')):
-        if not 0.0 <= lr:
+        if not 0.0 < d0:
+            raise ValueError("Invalid d0 value: {}".format(d0))
+        if not 0.0 < lr:
             raise ValueError("Invalid learning rate: {}".format(lr))
-        if not 0.0 <= eps:
+        if not 0.0 < eps:
             raise ValueError("Invalid epsilon value: {}".format(eps))
         if not 0.0 <= betas[0] < 1.0:
             raise ValueError("Invalid beta parameter at index 0: {}".format(betas[0]))
