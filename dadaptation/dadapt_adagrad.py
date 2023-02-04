@@ -192,6 +192,11 @@ class DAdaptAdaGrad(torch.optim.Optimizer):
         sksq_weighted = sksq_weighted + sksq_weighted_change
         skl1 = skl1 + skl1_change
 
+        # if we have not done any progres, return
+        # if we have any gradients available, will have skl1 > 0 (unless \|g\|=0)
+        if skl1 == 0:
+            return loss
+
         gsq_weighted = gsq_weighted + dlr*dlr*g_sq
         d_hat = d
         
