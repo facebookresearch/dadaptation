@@ -122,7 +122,7 @@ class DAdaptSGDIP(torch.optim.Optimizer):
 
                 s = state['s']
 
-                numerator_acum += dlr * torch.dot(grad.flatten(), s.flatten())
+                numerator_acum += dlr * torch.dot(grad.flatten(), s.flatten()).item()
                 
                 s.data.add_(grad, alpha=dlr)
                 sk_sq += (s * s).sum().item()

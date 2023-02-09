@@ -147,7 +147,7 @@ class DAdaptAdamIP(torch.optim.Optimizer):
                 s = state['s']
 
                 denom = exp_avg_sq.sqrt().add_(eps)
-                numerator_acum += dlr * torch.dot(grad.flatten(), s.div(denom).flatten())
+                numerator_acum += dlr * torch.dot(grad.flatten(), s.div(denom).flatten()).item()
 
                 # Adam EMA updates
                 exp_avg.mul_(beta1).add_(grad, alpha=dlr*(1-beta1))
