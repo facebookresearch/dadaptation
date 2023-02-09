@@ -37,7 +37,7 @@ class DAdaptAdam(torch.optim.Optimizer):
         momentum (float): 
             Momentum value in  the range [0,1) (default: 0.9).
         eps (float): 
-            Term added to the denominator outside of the root operation to improve numerical stability. (default: 0).
+            Term added to the denominator outside of the root operation to improve numerical stability. (default: 1e-8).
         weight_decay (float): 
             Weight decay, i.e. a L2 penalty (default: 0).
         log_every (int): 
@@ -56,9 +56,11 @@ class DAdaptAdam(torch.optim.Optimizer):
                  weight_decay=0, log_every=0,
                  decouple=False,
                  d0=1e-6, growth_rate=float('inf')):
-        if not 0.0 <= lr:
+        if not 0.0 < d0:
+            raise ValueError("Invalid d0 value: {}".format(d0))
+        if not 0.0 < lr:
             raise ValueError("Invalid learning rate: {}".format(lr))
-        if not 0.0 <= eps:
+        if not 0.0 < eps:
             raise ValueError("Invalid epsilon value: {}".format(eps))
         if not 0.0 <= betas[0] < 1.0:
             raise ValueError("Invalid beta parameter at index 0: {}".format(betas[0]))
@@ -68,7 +70,6 @@ class DAdaptAdam(torch.optim.Optimizer):
         if decouple:
             print(f"Using decoupled weight decay")
 
-        
         defaults = dict(lr=lr, betas=betas, eps=eps,
                         weight_decay=weight_decay,
                         d = d0, 
@@ -164,6 +165,11 @@ class DAdaptAdam(torch.optim.Optimizer):
 
         gsq_weighted = beta2*gsq_weighted + g_sq*(dlr**2)*(1-beta2)
         d_hat = d
+
+        # if we have not done any progres, return
+        # if we have any gradients available, will have sk_l1 > 0 (unless \|g\|=0)
+        if sk_l1 == 0:
+            return loss
 
         if lr > 0.0:
             d_hat = (sksq_weighted/(1-beta2) - gsq_weighted)/sk_l1

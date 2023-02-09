@@ -40,6 +40,12 @@ class DAdaptSGDIP(torch.optim.Optimizer):
         weight_decay=0, 
         log_every=0,
         d0=1e-6, growth_rate=float('inf')):
+
+        if not 0.0 < d0:
+            raise ValueError("Invalid d0 value: {}".format(d0))
+        if not 0.0 < lr:
+            raise ValueError("Invalid learning rate: {}".format(lr))
+
         defaults = dict(lr=lr,
             momentum=momentum, 
             weight_decay=weight_decay, k=0,
@@ -130,6 +136,11 @@ class DAdaptSGDIP(torch.optim.Optimizer):
 
         numerator_weighted += numerator_acum
         d_hat = d
+
+        # if we have not done any updates
+        # if we have any gradients available, will have sk_sq > 0 (unless \|g\|=0)
+        if sk_sq == 0:
+            return loss
 
         if lr > 0.0:
             d_hat = 2*numerator_weighted/math.sqrt(sk_sq)
