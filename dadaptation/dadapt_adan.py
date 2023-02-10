@@ -58,9 +58,11 @@ class DAdaptAdan(torch.optim.Optimizer):
                  no_prox=False,
                  log_every=0, d0=1e-6, 
                  growth_rate=float('inf')):
+        if not 0.0 < d0:
+            raise ValueError("Invalid d0 value: {}".format(d0))
         if not 0.0 <= lr:
             raise ValueError("Invalid learning rate: {}".format(lr))
-        if not 0.0 <= eps:
+        if not 0.0 < eps:
             raise ValueError("Invalid epsilon value: {}".format(eps))
         if not 0.0 <= betas[0] < 1.0:
             raise ValueError("Invalid beta parameter at index 0: {}".format(betas[0]))
@@ -77,7 +79,6 @@ class DAdaptAdan(torch.optim.Optimizer):
                         gsq_weighted=0.0,
                         log_every=log_every,
                         growth_rate=growth_rate)
-        self.d0 = d0
         super().__init__(params, defaults)
 
     @property
@@ -188,6 +189,11 @@ class DAdaptAdan(torch.optim.Optimizer):
         
         gsq_weighted = beta3*gsq_weighted + g_sq*(dlr**2)*(1-beta3)
         d_hat = d
+        
+        # if we have not done any progres, return
+        # if we have any gradients available, will have sk_l1 > 0 (unless \|g\|=0)
+        if sk_l1 == 0:
+            return loss
         
         if lr > 0.0:
             d_hat = (sksq_weighted/(1-beta3) - gsq_weighted)/sk_l1
