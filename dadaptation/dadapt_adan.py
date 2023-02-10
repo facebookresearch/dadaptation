@@ -60,7 +60,7 @@ class DAdaptAdan(torch.optim.Optimizer):
                  growth_rate=float('inf')):
         if not 0.0 < d0:
             raise ValueError("Invalid d0 value: {}".format(d0))
-        if not 0.0 <= lr:
+        if not 0.0 < lr:
             raise ValueError("Invalid learning rate: {}".format(lr))
         if not 0.0 < eps:
             raise ValueError("Invalid epsilon value: {}".format(eps))
