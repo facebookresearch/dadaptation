@@ -35,7 +35,7 @@ class DAdaptSGDIP(torch.optim.Optimizer):
             help if training is unstable.
     """
     def __init__(self, params, 
-        lr=1e-2, 
+        lr=1.0, 
         momentum=0, 
         weight_decay=0, 
         log_every=0,
