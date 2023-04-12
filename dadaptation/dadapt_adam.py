@@ -115,10 +115,11 @@ class DAdaptAdam(torch.optim.Optimizer):
         sksq_weighted = 0.0
         sk_l1 = 0.0
 
+        lr = max(group['lr'] for group in self.param_groups)
+
         group = self.param_groups[0]
         gsq_weighted = group['gsq_weighted']
         d = group['d']
-        lr = group['lr']
         dlr = d*lr
         
         growth_rate = group['growth_rate']
@@ -129,9 +130,13 @@ class DAdaptAdam(torch.optim.Optimizer):
         beta1, beta2 = group['betas']
 
         for group in self.param_groups:
+            group_lr = group['lr']
             decay = group['weight_decay']
             k = group['k']
             eps = group['eps']
+
+            if group_lr not in [lr, 0.0]:
+                raise RuntimeError(f"Setting different lr values in different parameter groups is only supported for values of 0")
 
             for p in group['params']:
                 if p.grad is None:
@@ -160,17 +165,18 @@ class DAdaptAdam(torch.optim.Optimizer):
                 grad_grad = to_real(grad * grad.conj())
 
                 # Adam EMA updates
-                exp_avg.mul_(beta1).add_(grad, alpha=dlr*(1-beta1))
-                exp_avg_sq.mul_(beta2).add_(grad_grad, alpha=1-beta2)
-                
-                denom = exp_avg_sq.sqrt().add_(eps)
+                if group_lr > 0:
+                    exp_avg.mul_(beta1).add_(grad, alpha=dlr*(1-beta1))
+                    exp_avg_sq.mul_(beta2).add_(grad_grad, alpha=1-beta2)
+                    
+                    denom = exp_avg_sq.sqrt().add_(eps)
 
-                g_sq += grad_grad.div_(denom).sum().item()
+                    g_sq += grad_grad.div_(denom).sum().item()
 
-                s = state['s']
-                s.mul_(beta2).add_(grad, alpha=dlr*(1-beta2))
-                sksq_weighted += to_real(s * s.conj()).div_(denom).sum().item()
-                sk_l1 += s.abs().sum().item()
+                    s = state['s']
+                    s.mul_(beta2).add_(grad, alpha=dlr*(1-beta2))
+                    sksq_weighted += to_real(s * s.conj()).div_(denom).sum().item()
+                    sk_l1 += s.abs().sum().item()
 
             ######
 
@@ -210,6 +216,7 @@ class DAdaptAdam(torch.optim.Optimizer):
             group['gsq_weighted'] = gsq_weighted
             group['d'] = d
 
+            group_lr = group['lr']
             decay = group['weight_decay']
             k = group['k']
             eps = group['eps']
@@ -229,7 +236,7 @@ class DAdaptAdam(torch.optim.Optimizer):
                 denom = denom.type(p.type())
 
                 # Apply weight decay (decoupled variant)
-                if decay != 0 and decouple:
+                if decay != 0 and decouple and group_lr > 0:
                     p.data.add_(p.data, alpha=-decay * dlr)
 
 

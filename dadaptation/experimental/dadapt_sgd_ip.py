@@ -8,12 +8,16 @@ import torch
 import torch.optim
 import pdb
 import math
+import logging
+import torch.distributed as dist
 
 class DAdaptSGDIP(torch.optim.Optimizer):
     r"""
     Implements Adam with D-Adaptation automatic step-sizes. Leave LR set to 1 unless you encounter instability.
+    
     Unlike the AdamIP variant, this IP variant is computing almost exactly the same bound, and should perform 
     similarly to the non-IP version.
+
     Arguments:
         params (iterable): 
             Iterable of parameters to optimize or dicts defining parameter groups.
@@ -33,13 +37,18 @@ class DAdaptSGDIP(torch.optim.Optimizer):
             prevent the D estimate from growing faster than this multiplicative rate. 
             Default is inf, for unrestricted. More conservative values like 1.02 may
             help if training is unstable.
+        fsdp_in_use (bool):
+            If you're using sharded parameters, this should be set to True. The optimizer
+            will attempt to auto-detect this, but if you're using an implementation other
+            than PyTorch's builtin version, the auto-detection won't work.
     """
     def __init__(self, params, 
         lr=1.0, 
         momentum=0, 
         weight_decay=0, 
         log_every=0,
-        d0=1e-6, growth_rate=float('inf')):
+        d0=1e-6, growth_rate=float('inf'),
+        fsdp_in_use=False):
 
         if not 0.0 < d0:
             raise ValueError("Invalid d0 value: {}".format(d0))
@@ -50,7 +59,10 @@ class DAdaptSGDIP(torch.optim.Optimizer):
             momentum=momentum, 
             weight_decay=weight_decay, k=0,
             log_every=log_every,
-            numerator_weighted=0.0, d=d0, growth_rate=growth_rate)
+            numerator_weighted=0.0, 
+            d=d0, 
+            growth_rate=growth_rate,
+            fsdp_in_use=fsdp_in_use)
         self.loggables = {}
 
         try:
@@ -66,7 +78,8 @@ class DAdaptSGDIP(torch.optim.Optimizer):
             loss = closure()
 
         group = self.param_groups[0]
-        lr = group['lr']
+        lr = max(group['lr'] for group in self.param_groups)
+
         decay = group['weight_decay']
         momentum = group['momentum']
         log_every = group['log_every']
@@ -76,6 +89,7 @@ class DAdaptSGDIP(torch.optim.Optimizer):
         numerator_weighted = group['numerator_weighted']
         growth_rate = group['growth_rate']
         d = group['d']
+        fsdp_in_use = group['fsdp_in_use']
         
         group = self.param_groups[0]
         
@@ -87,6 +101,8 @@ class DAdaptSGDIP(torch.optim.Optimizer):
                 for p in group['params']:
                     if p.grad is None:
                         continue
+                    if hasattr(p, "_fsdp_flattened"):
+                        fsdp_in_use = True
                     grad = p.grad.data
                     
                     # Apply weight decay
@@ -100,12 +116,16 @@ class DAdaptSGDIP(torch.optim.Optimizer):
 
                     g_sq += (grad * grad).sum().item()
 
-            group['g0_norm'] = g0_norm = math.sqrt(g_sq)
+            if fsdp_in_use:
+                dist_tensor = torch.zeros(1).cuda()
+                dist_tensor[0] = g_sq
+                dist.all_reduce(dist_tensor, op=dist.ReduceOp.SUM)
+                global_gsq = dist_tensor[0]
+            else:
+                global_gsq = g_sq
+            g0_norm = math.sqrt(global_gsq)
 
-        g0_norm = group['g0_norm']
         dlr = d*lr/g0_norm
-
-        numerator_acum = 0.0
 
         for group in self.param_groups:
             for p in group['params']:
@@ -128,26 +148,37 @@ class DAdaptSGDIP(torch.optim.Optimizer):
 
                 s = state['s']
 
-                numerator_acum += dlr * torch.dot(grad.flatten(), s.flatten()).item()
+                numerator_weighted += dlr * torch.dot(grad.flatten(), s.flatten()).item()
                 
                 s.data.add_(grad, alpha=dlr)
                 sk_sq += (s * s).sum().item()
             ######
 
-        numerator_weighted += numerator_acum
         d_hat = d
+
+        if lr > 0.0:
+            if fsdp_in_use:
+                dist_tensor = torch.zeros(2).cuda()
+                dist_tensor[0] = sk_sq
+                dist_tensor[1] = numerator_weighted
+                dist.all_reduce(dist_tensor, op=dist.ReduceOp.SUM)
+                global_sk_sq = dist_tensor[0]
+                global_numerator_weighted = dist_tensor[1]
+            else:
+                global_sk_sq = sk_sq
+                global_numerator_weighted = numerator_weighted
+
+            d_hat = 2*global_numerator_weighted/math.sqrt(global_sk_sq)
+            d = max(d, min(d_hat, d*growth_rate))
+
 
         # if we have not done any updates
         # if we have any gradients available, will have sk_sq > 0 (unless \|g\|=0)
-        if sk_sq == 0:
+        if global_sk_sq == 0:
             return loss
 
-        if lr > 0.0:
-            d_hat = 2*numerator_weighted/math.sqrt(sk_sq)
-            d = group['d'] = max(d, min(d_hat, d*growth_rate))
-
         if log_every > 0 and k % log_every == 0:
-            print(f"(r={self.rank},k={k}) dlr: {dlr} d_hat: {d_hat}, d: {d}. sk_norm={math.sqrt(sk_sq)} numerator_acum={numerator_acum} g0_norm={g0_norm}", flush=True)
+            logging.info(f"(r={self.rank},k={k}) dlr: {dlr} d_hat: {d_hat}, d: {d}. sk_norm={math.sqrt(global_sk_sq)} numerator_weighted={global_numerator_weighted} g0_norm={g0_norm}", flush=True)
 
         for group in self.param_groups:
             group['numerator_weighted'] = numerator_weighted

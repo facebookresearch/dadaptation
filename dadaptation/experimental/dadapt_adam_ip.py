@@ -12,6 +12,7 @@ import torch.optim
 import pdb
 import logging
 import os
+import torch.distributed as dist
 
 if TYPE_CHECKING:
     from torch.optim.optimizer import _params_t
@@ -50,12 +51,17 @@ class DAdaptAdamIP(torch.optim.Optimizer):
             prevent the D estimate from growing faster than this multiplicative rate. 
             Default is inf, for unrestricted. Values like 1.02 give a kind of learning
             rate warmup effect.
+        fsdp_in_use (bool):
+            If you're using sharded parameters, this should be set to True. The optimizer
+            will attempt to auto-detect this, but if you're using an implementation other
+            than PyTorch's builtin version, the auto-detection won't work.
     """
     def __init__(self, params, lr=1.0, 
                  betas=(0.9, 0.999), eps=1e-8,
                  weight_decay=0, log_every=0,
                  decouple=False,
-                 d0=1e-6, growth_rate=float('inf')):
+                 d0=1e-6, growth_rate=float('inf'),
+                 fsdp_in_use=False):
         if not 0.0 < d0:
             raise ValueError("Invalid d0 value: {}".format(d0))
         if not 0.0 < lr:
@@ -78,7 +84,8 @@ class DAdaptAdamIP(torch.optim.Optimizer):
                         numerator_weighted=0.0,
                         log_every=log_every,
                         growth_rate=growth_rate,
-                        decouple=decouple)
+                        decouple=decouple,
+                        fsdp_in_use=fsdp_in_use)
         self.d0 = d0
         super().__init__(params, defaults)
 
@@ -103,17 +110,17 @@ class DAdaptAdamIP(torch.optim.Optimizer):
 
         sk_l1 = 0.0
 
-        ngroups = len(self.param_groups)
-
         group = self.param_groups[0]
         numerator_weighted = group['numerator_weighted']
         d = group['d']
-        lr = group['lr']
+        lr = max(group['lr'] for group in self.param_groups)
+
         dlr = d*lr
         
         growth_rate = group['growth_rate']
         decouple = group['decouple']
         log_every = group['log_every']
+        fsdp_in_use = group['fsdp_in_use']
 
         beta1, beta2 = group['betas']
 
@@ -127,6 +134,9 @@ class DAdaptAdamIP(torch.optim.Optimizer):
             for p in group['params']:
                 if p.grad is None:
                     continue
+                if hasattr(p, "_fsdp_flattened"):
+                    fsdp_in_use = True
+                
                 grad = p.grad.data
                 
                 # Apply weight decay (coupled variant)
@@ -169,11 +179,23 @@ class DAdaptAdamIP(torch.optim.Optimizer):
             return loss
         
         if lr > 0.0:
-            d_hat = 2*(beta2/(1-beta2))*numerator_weighted/sk_l1
+            if fsdp_in_use:
+                dist_tensor = torch.zeros(3).cuda()
+                dist_tensor[0] = numerator_weighted
+                dist_tensor[1] = sk_l1
+                dist.all_reduce(dist_tensor, op=dist.ReduceOp.SUM)
+                global_numerator_weighted = dist_tensor[0]
+                global_sk_l1 = dist_tensor[1]
+            else:
+                global_numerator_weighted = numerator_weighted
+                global_sk_l1 = sk_l1
+
+
+            d_hat = 2*(beta2/(1-beta2))*global_numerator_weighted/global_sk_l1
             d = max(d, min(d_hat, d*growth_rate))
 
         if log_every > 0 and k % log_every == 0:
-            print(f"ng: {ngroups} lr: {lr} dlr: {dlr} d_hat: {d_hat}, d: {d}. sk_l1={sk_l1:1.1e} numerator_weighted={numerator_weighted:1.1e}")
+            logging.info(f"lr: {lr} dlr: {dlr} d_hat: {d_hat}, d: {d}. sk_l1={global_sk_l1:1.1e} numerator_weighted={global_numerator_weighted:1.1e}")
 
         for group in self.param_groups:
             group['numerator_weighted'] = numerator_weighted

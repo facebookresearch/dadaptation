@@ -77,9 +77,10 @@ class DAdaptSGD(torch.optim.Optimizer):
         if closure is not None:
             loss = closure()
 
+        lr = max(group['lr'] for group in self.param_groups)
+
         # Stored at the group level to ensure resuming from checkpoints works
         group = self.param_groups[0]
-        lr = group['lr']
         decay = group['weight_decay']
         momentum = group['momentum']
         log_every = group['log_every']
@@ -97,6 +98,8 @@ class DAdaptSGD(torch.optim.Optimizer):
 
         for group in self.param_groups:
             group_lr = group['lr']
+            if group_lr not in [lr, 0.0]:
+                raise RuntimeError(f"Setting different lr values in different parameter groups is only supported for values of 0")
             for p in group['params']:
                 if p.grad is None:
                     continue
