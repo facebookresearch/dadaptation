@@ -8,7 +8,7 @@ Learning rate free learning for SGD, AdaGrad and Adam!
 
 ## Details
 
-The provided Pytorch Optimizer classes are drop-in replacements, either copy into your project or use via dadaptation.DAdaptSGD,  dadaptation.DAdaptAdam or dadaptation.DAdaptAdaGrad.
+The provided Pytorch Optimizer classes are drop-in replacements, either copy into your project or use via pip with dadaptation.DAdaptSGD,  dadaptation.DAdaptAdam or dadaptation.DAdaptAdaGrad.
 
  - **Set the LR parameter to 1.0**. This parameter is not ignored, rather, setting it larger to smaller will directly scale up or down the D-Adapted learning rate. 
  - **Use the same learning rate scheduler you would normally use on the problem.**
@@ -17,8 +17,16 @@ The provided Pytorch Optimizer classes are drop-in replacements, either copy int
  - Use the log_every setting to see the learning rate being used (d*lr) and the current D bound.
  - Only the AdaGrad version supports sparse gradients.
  - The Adam IP variant implements a tighter D bound, which may help on some problems. The IP variants should be considered experimental.
- - If you encounter divergence early on, and are not already using learning rate warmup, try change growth_rate to match a reasonable warmup schedule rate for your problem. 
+ - Parameter-group level LR values are not fully supported. The optimizer only supports setting zero LR for some groups in order to do fine-tuning on parts of a model.
  
+## Change Log
+
+### Version 2.0
+ - Added DAdaptAdan - should still be considered experimental.
+ - Added support for PyTorch's Fully Sharded Data Parallel. 
+ - Improved support of edge cases such as learning rate zero.
+ - Improved logging - uses Python logging rather than print statements
+
  # Experimental results
 
 ![vision](figures/dadapt_cifar.png)
