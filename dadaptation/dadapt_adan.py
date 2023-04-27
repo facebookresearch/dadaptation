@@ -4,25 +4,23 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 
-import math
-from typing import TYPE_CHECKING, Any, Callable, Optional
+from typing import TYPE_CHECKING, Any
 
 import torch
 import torch.optim
-import pdb
-import logging
-import os
 
 if TYPE_CHECKING:
     from torch.optim.optimizer import _params_t
 else:
     _params_t = Any
 
+
 def to_real(x):
     if torch.is_complex(x):
         return x.real
     else:
         return x
+
 
 class DAdaptAdan(torch.optim.Optimizer):
     r"""
@@ -165,7 +163,7 @@ class DAdaptAdan(torch.optim.Optimizer):
                     # Previous gradient values
                     state['pre_grad'] = grad.clone()
 
-                exp_avg, exp_avg_sq, exp_avg_diff = state['exp_avg'], state['exp_avg_diff'], state['exp_avg_sq']
+                exp_avg, exp_avg_diff, exp_avg_sq = state['exp_avg'], state['exp_avg_diff'], state['exp_avg_sq']
                 grad_diff = grad - state['pre_grad']
                 
                 grad_grad = to_real(grad * grad.conj())
@@ -217,8 +215,8 @@ class DAdaptAdan(torch.optim.Optimizer):
 
                 state = self.state[p]
 
-                exp_avg, exp_avg_sq, exp_avg_diff = state['exp_avg'], state['exp_avg_diff'], state['exp_avg_sq']
-                
+                exp_avg, exp_avg_diff, exp_avg_sq = state['exp_avg'], state['exp_avg_diff'], state['exp_avg_sq']
+
                 state['step'] += 1
                 
                 denom = exp_avg_sq.sqrt().add_(eps)
