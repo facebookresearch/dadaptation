@@ -35,8 +35,6 @@ class DAdaptAdam(torch.optim.Optimizer):
             Learning rate adjustment parameter. Increases or decreases the D-adapted learning rate.
         betas (Tuple[float, float], optional): coefficients used for computing
             running averages of gradient and its square (default: (0.9, 0.999))
-        momentum (float): 
-            Momentum value in  the range [0,1) (default: 0.9).
         eps (float): 
             Term added to the denominator outside of the root operation to improve numerical stability. (default: 1e-8).
         weight_decay (float): 
@@ -128,6 +126,7 @@ class DAdaptAdam(torch.optim.Optimizer):
         log_every = group['log_every']
 
         beta1, beta2 = group['betas']
+        sqrt_beta2 = beta2**(0.5)
 
         for group in self.param_groups:
             group_lr = group['lr']
@@ -174,13 +173,13 @@ class DAdaptAdam(torch.optim.Optimizer):
                     g_sq += grad_grad.div_(denom).sum().item()
 
                     s = state['s']
-                    s.mul_(beta2).add_(grad, alpha=dlr*(1-beta2))
+                    s.mul_(sqrt_beta2).add_(grad, alpha=dlr*(1-sqrt_beta2))
                     sksq_weighted += to_real(s * s.conj()).div_(denom).sum().item()
                     sk_l1 += s.abs().sum().item()
 
             ######
 
-        gsq_weighted = beta2*gsq_weighted + g_sq*(dlr**2)*(1-beta2)
+        gsq_weighted = sqrt_beta2*gsq_weighted + (1-sqrt_beta2)*(dlr**2)*g_sq
         d_hat = d
 
         # if we have not done any progres, return
@@ -203,7 +202,7 @@ class DAdaptAdam(torch.optim.Optimizer):
                 global_gsq_weighted = gsq_weighted
                 global_sk_l1 = sk_l1
 
-            d_hat = (global_sksq_weighted/(1-beta2) - global_gsq_weighted)/global_sk_l1
+            d_hat = 0.5*(global_sksq_weighted/(1-sqrt_beta2) - global_gsq_weighted)/global_sk_l1
             d = max(d, min(d_hat, d*growth_rate))
 
         if log_every > 0 and k % log_every == 0:

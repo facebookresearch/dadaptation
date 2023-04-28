@@ -35,8 +35,6 @@ class DAdaptAdamIP(torch.optim.Optimizer):
             Learning rate adjustment parameter. Increases or decreases the D-adapted learning rate.
         betas (Tuple[float, float], optional): coefficients used for computing
             running averages of gradient and its square (default: (0.9, 0.999))
-        momentum (float): 
-            Momentum value in  the range [0,1) (default: 0.9).
         eps (float): 
             Term added to the denominator outside of the root operation to improve numerical stability. (default: 0).
         weight_decay (float): 
@@ -123,6 +121,7 @@ class DAdaptAdamIP(torch.optim.Optimizer):
         fsdp_in_use = group['fsdp_in_use']
 
         beta1, beta2 = group['betas']
+        sqrt_beta2 = beta2**(0.5)
 
         numerator_acum = 0.0
 
@@ -165,12 +164,12 @@ class DAdaptAdamIP(torch.optim.Optimizer):
                 exp_avg.mul_(beta1).add_(grad, alpha=dlr*(1-beta1))
                 exp_avg_sq.mul_(beta2).addcmul_(grad, grad, value=1-beta2)
 
-                s.mul_(beta2).add_(grad, alpha=dlr*(1-beta2))
+                s.mul_(sqrt_beta2).add_(grad, alpha=dlr*(1-sqrt_beta2))
                 sk_l1 += s.abs().sum().item()
 
             ######
 
-        numerator_weighted = beta2*numerator_weighted + (1-beta2)*numerator_acum
+        numerator_weighted = sqrt_beta2*numerator_weighted + (1-sqrt_beta2)*numerator_acum
         d_hat = d
 
         # if we have not done any progres, return
@@ -180,7 +179,7 @@ class DAdaptAdamIP(torch.optim.Optimizer):
         
         if lr > 0.0:
             if fsdp_in_use:
-                dist_tensor = torch.zeros(3).cuda()
+                dist_tensor = torch.zeros(2).cuda()
                 dist_tensor[0] = numerator_weighted
                 dist_tensor[1] = sk_l1
                 dist.all_reduce(dist_tensor, op=dist.ReduceOp.SUM)
@@ -191,7 +190,7 @@ class DAdaptAdamIP(torch.optim.Optimizer):
                 global_sk_l1 = sk_l1
 
 
-            d_hat = 2*(beta2/(1-beta2))*global_numerator_weighted/global_sk_l1
+            d_hat = global_numerator_weighted/((1-sqrt_beta2)*global_sk_l1)
             d = max(d, min(d_hat, d*growth_rate))
 
         if log_every > 0 and k % log_every == 0:
