@@ -41,7 +41,7 @@ class DAdaptSGD(torch.optim.Optimizer):
     """
     def __init__(self, params, 
         lr=1.0, 
-        momentum=0, 
+        momentum=0.9, 
         weight_decay=0, 
         log_every=0,
         d0=1e-6, growth_rate=float('inf'),
@@ -120,7 +120,9 @@ class DAdaptSGD(torch.optim.Optimizer):
                 global_gsq = dist_tensor[0]
             else:
                 global_gsq = g_sq
-            g0_norm = math.sqrt(global_gsq)
+            group['g0_norm'] = g0_norm = math.sqrt(global_gsq)
+
+        g0_norm = group['g0_norm']
 
         dlr = d*lr/g0_norm
 
@@ -136,12 +138,12 @@ class DAdaptSGD(torch.optim.Optimizer):
                     s = state['s'] = torch.zeros_like(p.data).detach()
                     x0 = state['x0'] = torch.clone(p.data).detach()
 
-                    # Apply weight decay
-                    if decay != 0:
-                        if grad.is_sparse:
-                            raise RuntimeError("weight_decay option is not compatible with sparse gradients")
+                # Apply weight decay
+                if decay != 0:
+                    if grad.is_sparse:
+                        raise RuntimeError("weight_decay option is not compatible with sparse gradients")
 
-                        grad.add_(p.data, alpha=decay)
+                    grad.add_(p.data, alpha=decay)
 
                 s = state['s']
 
@@ -175,7 +177,7 @@ class DAdaptSGD(torch.optim.Optimizer):
             return loss
 
         if log_every > 0 and k % log_every == 0:
-            logging.info(f"(r={self.rank},k={k}) dlr: {dlr} d_hat: {d_hat}, d: {d}. sk_norm={math.sqrt(global_sk_sq)} numerator_weighted={global_numerator_weighted} g0_norm={g0_norm}", flush=True)
+            logging.info(f"(r={self.rank},k={k}) dlr: {dlr} d_hat: {d_hat}, d: {d}. sk_norm={math.sqrt(global_sk_sq)} numerator_weighted={global_numerator_weighted} g0_norm={g0_norm}")
 
         for group in self.param_groups:
             group['numerator_weighted'] = numerator_weighted
@@ -201,4 +203,3 @@ class DAdaptSGD(torch.optim.Optimizer):
             group['k'] = k + 1
 
         return loss
-
