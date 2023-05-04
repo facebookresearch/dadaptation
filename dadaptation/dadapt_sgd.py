@@ -95,6 +95,7 @@ class DAdaptSGD(torch.optim.Optimizer):
         if k == 0: 
             g_sq = 0.0
             for group in self.param_groups:
+                group_lr = group['lr']
                 for p in group['params']:
                     if p.grad is None:
                         continue
@@ -104,14 +105,12 @@ class DAdaptSGD(torch.optim.Optimizer):
                     
                     # Apply weight decay
                     if decay != 0:
-                        if grad.is_sparse:
-                            raise RuntimeError("weight_decay option is not compatible with sparse gradients")
-
                         grad.add(p.data, alpha=decay)
 
                     state = self.state[p]
 
-                    g_sq += (grad * grad).sum().item()
+                    if group_lr > 0.0:
+                        g_sq += (grad * grad).sum().item()
 
             if fsdp_in_use:
                 dist_tensor = torch.zeros(1).cuda()
@@ -127,6 +126,10 @@ class DAdaptSGD(torch.optim.Optimizer):
         dlr = d*lr/g0_norm
 
         for group in self.param_groups:
+            group_lr = group['lr']
+            if group_lr not in [lr, 0.0]:
+                raise RuntimeError(f"Setting different lr values in different parameter groups is only supported for values of 0")
+            
             for p in group['params']:
                 if p.grad is None:
                     continue
@@ -140,17 +143,15 @@ class DAdaptSGD(torch.optim.Optimizer):
 
                 # Apply weight decay
                 if decay != 0:
-                    if grad.is_sparse:
-                        raise RuntimeError("weight_decay option is not compatible with sparse gradients")
-
                     grad.add_(p.data, alpha=decay)
 
                 s = state['s']
 
-                numerator_weighted += dlr * torch.dot(grad.flatten(), s.flatten()).item()
-                
-                s.data.add_(grad, alpha=dlr)
-                sk_sq += (s * s).sum().item()
+                if group_lr > 0.0:
+                    numerator_weighted += dlr * torch.dot(grad.flatten(), s.flatten()).item()
+                    
+                    s.data.add_(grad, alpha=dlr)
+                    sk_sq += (s * s).sum().item()
             ######
 
         d_hat = d

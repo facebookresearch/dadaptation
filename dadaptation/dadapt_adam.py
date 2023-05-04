@@ -39,6 +39,8 @@ class DAdaptAdam(torch.optim.Optimizer):
             Log using print every k steps, default 0 (no logging).
         decouple (boolean): 
             Use AdamW style decoupled weight decay
+        use_bias_correction (boolean):
+            Turn on Adam's bias correction. Off by default.
         d0 (float):
             Initial D estimate for D-adaptation (default 1e-6). Rarely needs changing.
         growth_rate (float):
@@ -54,6 +56,7 @@ class DAdaptAdam(torch.optim.Optimizer):
                  betas=(0.9, 0.999), eps=1e-8,
                  weight_decay=0, log_every=0,
                  decouple=False,
+                 use_bias_correction=False,
                  d0=1e-6, growth_rate=float('inf'),
                  fsdp_in_use=False):
         if not 0.0 < d0:
@@ -78,6 +81,7 @@ class DAdaptAdam(torch.optim.Optimizer):
                         numerator_weighted=0.0,
                         log_every=log_every,
                         growth_rate=growth_rate,
+                        use_bias_correction=use_bias_correction,
                         decouple=decouple,
                         fsdp_in_use=fsdp_in_use)
         self.d0 = d0
@@ -105,18 +109,27 @@ class DAdaptAdam(torch.optim.Optimizer):
         sk_l1 = 0.0
 
         group = self.param_groups[0]
+        use_bias_correction = group['use_bias_correction']
         numerator_weighted = group['numerator_weighted']
+        beta1, beta2 = group['betas']
+        k = group['k']
+
         d = group['d']
         lr = max(group['lr'] for group in self.param_groups)
 
-        dlr = d*lr
+        if use_bias_correction:
+            bias_correction = ((1-beta2**(k+1))**0.5)/(1-beta1**(k+1))
+        else:
+            bias_correction = 1
+
+        dlr = d*lr*bias_correction
         
         growth_rate = group['growth_rate']
         decouple = group['decouple']
         log_every = group['log_every']
         fsdp_in_use = group['fsdp_in_use']
 
-        beta1, beta2 = group['betas']
+        
         sqrt_beta2 = beta2**(0.5)
 
         numerator_acum = 0.0
@@ -125,6 +138,10 @@ class DAdaptAdam(torch.optim.Optimizer):
             decay = group['weight_decay']
             k = group['k']
             eps = group['eps']
+            group_lr = group['lr']
+
+            if group_lr not in [lr, 0.0]:
+                raise RuntimeError(f"Setting different lr values in different parameter groups is only supported for values of 0")
 
             for p in group['params']:
                 if p.grad is None:
@@ -153,15 +170,16 @@ class DAdaptAdam(torch.optim.Optimizer):
                 
                 s = state['s']
 
-                denom = exp_avg_sq.sqrt().add_(eps)
-                numerator_acum += dlr * torch.dot(grad.flatten(), s.div(denom).flatten()).item()
+                if group_lr > 0.0:
+                    denom = exp_avg_sq.sqrt().add_(eps)
+                    numerator_acum += dlr * torch.dot(grad.flatten(), s.div(denom).flatten()).item()
 
-                # Adam EMA updates
-                exp_avg.mul_(beta1).add_(grad, alpha=dlr*(1-beta1))
-                exp_avg_sq.mul_(beta2).addcmul_(grad, grad, value=1-beta2)
+                    # Adam EMA updates
+                    exp_avg.mul_(beta1).add_(grad, alpha=dlr*(1-beta1))
+                    exp_avg_sq.mul_(beta2).addcmul_(grad, grad, value=1-beta2)
 
-                s.mul_(sqrt_beta2).add_(grad, alpha=dlr*(1-sqrt_beta2))
-                sk_l1 += s.abs().sum().item()
+                    s.mul_(sqrt_beta2).add_(grad, alpha=dlr*(1-sqrt_beta2))
+                    sk_l1 += s.abs().sum().item()
 
             ######
 
