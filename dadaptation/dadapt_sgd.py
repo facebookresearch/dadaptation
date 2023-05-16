@@ -19,8 +19,6 @@ class DAdaptSGD(torch.optim.Optimizer):
             Iterable of parameters to optimize or dicts defining parameter groups.
         lr (float): 
             Learning rate adjustment parameter. Increases or decreases the D-adapted learning rate.
-        betas (Tuple[float, float], optional): coefficients used for computing
-            running averages of gradient and its square (default: (0.9, 0.999))
         momentum (float): 
             Momentum value in  the range [0,1) (default: 0).
         weight_decay (float): 
