@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Any, Callable, Optional
 import torch
 import torch.optim
 import pdb
+import logging
 
 if TYPE_CHECKING:
     from torch.optim.optimizer import _params_t
@@ -19,7 +20,12 @@ else:
 
 class DAdaptAdaGrad(torch.optim.Optimizer):
     """
-    Adagrad with D-Adaptation. Leave LR set to 1 unless you encounter instability.
+    Adagrad with D-Adaptation. We recommend Adam or SGD be used instead in most situations, 
+    as D-Adaptation on top of AdaGrad does not adapt the learning rate as quickly in 
+    practice as the other variants.
+
+    Leave LR set to 1 unless you encounter instability.
+
     Arguments:
         params (iterable): 
             Iterable of parameters to optimize or dicts defining parameter groups.
@@ -109,6 +115,8 @@ class DAdaptAdaGrad(torch.optim.Optimizer):
             for p in group['params']:
                 if p.grad is None:
                     continue
+                if hasattr(p, "_fsdp_flattened"):
+                    raise RuntimeError("D-Adapt AdaGrad doesn't currently support fully-sharded data parallel. Use D-Adapt Adam instead")
                 grad = p.grad.data
 
                 state = self.state[p]
@@ -205,7 +213,7 @@ class DAdaptAdaGrad(torch.optim.Optimizer):
             d = group['d'] = max(d, min(d_hat, d*growth_rate))
 
         if log_every > 0 and k % log_every == 0:
-            print(f"d_hat: {d_hat}, d: {d}. sksq_weighted={sksq_weighted:1.1e} skl1={skl1:1.1e} gsq_weighted={gsq_weighted:1.1e} lr={lr}")
+            logging.info(f"d_hat: {d_hat}, d: {d}. sksq_weighted={sksq_weighted:1.1e} skl1={skl1:1.1e} gsq_weighted={gsq_weighted:1.1e} lr={lr}")
 
         for group in self.param_groups:
             group['gsq_weighted'] = gsq_weighted
