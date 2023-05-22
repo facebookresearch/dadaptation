@@ -21,7 +21,7 @@ class DAdaptSGD(torch.optim.Optimizer):
         lr (float): 
             Learning rate adjustment parameter. Increases or decreases the D-adapted learning rate.
         momentum (float): 
-            Momentum value in  the range [0,1) (default: 0.0).
+            Momentum value in  the range [0,1) (default: 0).
         weight_decay (float): 
             Weight decay, i.e. a L2 penalty (default: 0).
         log_every (int): 
