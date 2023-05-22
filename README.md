@@ -6,7 +6,7 @@ Learning rate free learning for SGD, AdaGrad and Adam!
 
 ``` pip install dadaptation ```
 
-** NEW V3.0 release uses an improved algorithm that may give different results from past versions. The old version is still availiable under experimental/d_adapt_adam_preprint.**
+**NEW V3.0 release uses an improved algorithm that may give different results from past versions. The old version is still availiable under experimental/d_adapt_adam_preprint.**
 
 ## Details
 
