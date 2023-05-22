@@ -20,7 +20,12 @@ else:
 
 class DAdaptAdaGrad(torch.optim.Optimizer):
     """
-    Adagrad with D-Adaptation. Leave LR set to 1 unless you encounter instability.
+    Adagrad with D-Adaptation. We recommend Adam or SGD be used instead in most situations, 
+    as D-Adaptation on top of AdaGrad does not adapt the learning rate as quickly in 
+    practice as the other variants.
+
+    Leave LR set to 1 unless you encounter instability.
+
     Arguments:
         params (iterable): 
             Iterable of parameters to optimize or dicts defining parameter groups.

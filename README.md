@@ -6,6 +6,8 @@ Learning rate free learning for SGD, AdaGrad and Adam!
 
 ``` pip install dadaptation ```
 
+** NEW V3.0 release uses an improved algorithm that may give different results from past versions. The old version is still availiable under experimental/d_adapt_adam_preprint.**
+
 ## Details
 
 The provided Pytorch Optimizer classes are drop-in replacements, either copy into your project or use via pip with dadaptation.DAdaptSGD,  dadaptation.DAdaptAdam or dadaptation.DAdaptAdaGrad.
@@ -15,7 +17,7 @@ The provided Pytorch Optimizer classes are drop-in replacements, either copy int
  - The Adam variant supports AdamW style weight decay, just set decouple=True. It is not turned on by default, so if you are replacing your adam implementation, make sure you use decoupled if necessary.
  - It may be necessary to use larger weight decay than you would normally use, try a factor of 2 or 4 bigger if you see overfitting. D-Adaptation uses larger learning rates than people typically hand-choose, in some cases that requires more decay.
  - Use the log_every setting to see the learning rate being used (d*lr) and the current D bound.
- - Only the AdaGrad version supports sparse gradients.
+ - Only the AdaGrad version supports sparse gradients. It does not adapt as efficiently as the other variants and should be considered experimental.
  - Parameter-group level LR values are not fully supported. The optimizer only supports setting zero LR for some groups in order to do fine-tuning on parts of a model.
  
 ## Change Log
