@@ -53,7 +53,7 @@ class DAdaptAdam(torch.optim.Optimizer):
             than PyTorch's builtin version, the auto-detection won't work.
     """
     def __init__(self, params, lr=1.0, 
-                 betas=(0.9, 0.999), eps=1e-8,
+                 betas=(0.9, 0.999), eps=0.0,
                  weight_decay=0, log_every=0,
                  decouple=False,
                  use_bias_correction=False,
@@ -63,7 +63,7 @@ class DAdaptAdam(torch.optim.Optimizer):
             raise ValueError("Invalid d0 value: {}".format(d0))
         if not 0.0 < lr:
             raise ValueError("Invalid learning rate: {}".format(lr))
-        if not 0.0 < eps:
+        if not 0.0 <= eps:
             raise ValueError("Invalid epsilon value: {}".format(eps))
         if not 0.0 <= betas[0] < 1.0:
             raise ValueError("Invalid beta parameter at index 0: {}".format(betas[0]))
