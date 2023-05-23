@@ -1,4 +1,5 @@
 # D-Adaptation
+[![Downloads](https://static.pepy.tech/badge/dadaptation)](https://pepy.tech/project/dadaptation) [![Downloads](https://static.pepy.tech/badge/dadaptation/month)](https://pepy.tech/project/dadaptation)
 
 Learning rate free learning for SGD, AdaGrad and Adam! 
 
