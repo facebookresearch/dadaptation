@@ -32,7 +32,7 @@ class DAdaptAdam(torch.optim.Optimizer):
         betas (Tuple[float, float], optional): coefficients used for computing
             running averages of gradient and its square (default: (0.9, 0.999))
         eps (float): 
-            Term added to the denominator outside of the root operation to improve numerical stability. (default: 0).
+            Term added to the denominator outside of the root operation to improve numerical stability. (default: 1e-8).
         weight_decay (float): 
             Weight decay, i.e. a L2 penalty (default: 0).
         log_every (int): 
