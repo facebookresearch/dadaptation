@@ -121,7 +121,8 @@ class DAdaptLion(Optimizer):
                 sk_l1 += s.abs().sum().item()
 
         numerator_weighted = sqrt_beta2*numerator_weighted + (1-sqrt_beta2)*numerator_acum
-
+        d_hat = d
+        
         # if we have not done any progres, return
         # if we have any gradients available, will have sk_l1 > 0 (unless \|g\|=0)
         if sk_l1 == 0:
