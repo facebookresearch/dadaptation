@@ -24,10 +24,14 @@ def to_real(x):
 
 class DAdaptAdan(torch.optim.Optimizer):
     r"""
-    Implements Adan with D-Adaptation automatic step-sizes. Leave LR set to 1 unless you encounter instability.
+    Implements Adan with D-Adaptation automatic step-sizes. 
+    Has not been as heavily tested as DAdaptAdam and should be considered experimental.
+    
+    Leave LR set to 1 unless you encounter instability.
     Adan was proposed in
     Adan: Adaptive Nesterov Momentum Algorithm for Faster Optimizing Deep Models[J]. arXiv preprint arXiv:2208.06677, 2022.
     https://arxiv.org/abs/2208.06677
+    
     Arguments:
         params (iterable): 
             Iterable of parameters to optimize or dicts defining parameter groups.

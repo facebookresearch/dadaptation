@@ -14,7 +14,11 @@ import pdb
 
 class DAdaptLion(Optimizer):
     r"""
-    Implements Adam with D-Adaptation automatic step-sizes. Leave LR set to 1 unless you encounter instability.
+    Implements Lion with D-Adaptation automatic step-sizes. 
+    Has not been as heavily tested as DAdaptAdam and should be considered experimental.
+    
+    
+    Leave LR set to 1 unless you encounter instability.
     Arguments:
         params (iterable): 
             Iterable of parameters to optimize or dicts defining parameter groups.
@@ -98,7 +102,6 @@ class DAdaptLion(Optimizer):
                 state = self.state[p]
 
                 if 'exp_avg' not in state:
-                    print("Initializing")
                     state['exp_avg'] = torch.zeros_like(p).detach()
                     state['s'] = torch.zeros_like(p).detach()
 
