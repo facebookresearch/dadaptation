@@ -13,7 +13,7 @@ import torch.distributed as dist
 
 class DAdaptSGD(torch.optim.Optimizer):
     r"""
-    Implements Adam with D-Adaptation automatic step-sizes. Leave LR set to 1 unless you encounter instability.
+    Implements SGD with D-Adaptation automatic step-sizes. Leave LR set to 1 unless you encounter instability.
 
     Arguments:
         params (iterable): 
