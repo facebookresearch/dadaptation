@@ -12,6 +12,17 @@ Learning rate free learning for SGD, AdaGrad and Adam!
 ## NEW: Prodigy
 We have recently released the [Prodigy](https://github.com/konstmish/prodigy) method, which grows the adapted learning rate faster than D-Adaptation in theory and practice. Try it out if D-Adaptation is under-estimating the learning rate.
 
+## How To Cite
+If you use D-Adaptation in a publication, please cite our work as 
+```
+@ARTICLE{defazio2023dadapt,
+author = {Aaron Defazio and Konstantin Mishchenko},
+title = {Learning-Rate-Free Learning by D-Adaptation},
+journal = {The 40th International Conference on Machine Learning (ICML 2023)},
+year = {2023}
+}
+```
+
 ## Details
 
 The provided Pytorch Optimizer classes are drop-in replacements, either copy into your project or use via pip with dadaptation.DAdaptSGD,  dadaptation.DAdaptAdam or dadaptation.DAdaptAdaGrad.
