@@ -50,7 +50,7 @@ class DAdaptAdaGrad(torch.optim.Optimizer):
         momentum: float = 0, 
         log_every: int = 0,
         weight_decay: float = 0.0,
-        eps: float = 0.0,
+        eps: float = 1e-6,
         d0 = 1e-6, growth_rate=float('inf')
     ):
         if d0 <= 0:
