@@ -23,6 +23,11 @@ class DAdaptAdam(torch.optim.Optimizer):
     r"""
     Implements Adam with D-Adaptation automatic step-sizes. 
     Leave LR set to 1 unless you encounter instability.
+
+    To scale the learning rate differently for each layer, set the 'layer_scale'
+    for each parameter group. Increase (or decrease) from its default value of 1.0
+    to increase (or decrease) the learning rate for that layer relative to the 
+    other layers.
     
     Arguments:
         params (iterable): 
@@ -143,7 +148,9 @@ class DAdaptAdam(torch.optim.Optimizer):
             r = group['layer_scale']
 
             if group_lr not in [lr, 0.0]:
-                raise RuntimeError(f"Setting different lr values in different parameter groups is only supported for values of 0")
+                raise RuntimeError(f"Setting different lr values in different parameter groups "
+                                   "is only supported for values of 0. To scale the learning "
+                                   "rate differently for each layer, set the 'layer_scale' value instead.")
 
             for p in group['params']:
                 if p.grad is None:
