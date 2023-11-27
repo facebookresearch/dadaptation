@@ -23,6 +23,11 @@ class DAdaptAdam(torch.optim.Optimizer):
     r"""
     Implements Adam with D-Adaptation automatic step-sizes. 
     Leave LR set to 1 unless you encounter instability.
+
+    To scale the learning rate differently for each layer, set the 'layer_scale'
+    for each parameter group. Increase (or decrease) from its default value of 1.0
+    to increase (or decrease) the learning rate for that layer relative to the 
+    other layers.
     
     Arguments:
         params (iterable): 
@@ -77,7 +82,8 @@ class DAdaptAdam(torch.optim.Optimizer):
         defaults = dict(lr=lr, betas=betas, eps=eps,
                         weight_decay=weight_decay,
                         d = d0, 
-                        k=0, 
+                        k=0,
+                        layer_scale=1.0,
                         numerator_weighted=0.0,
                         log_every=log_every,
                         growth_rate=growth_rate,
@@ -139,9 +145,12 @@ class DAdaptAdam(torch.optim.Optimizer):
             k = group['k']
             eps = group['eps']
             group_lr = group['lr']
+            r = group['layer_scale']
 
             if group_lr not in [lr, 0.0]:
-                raise RuntimeError(f"Setting different lr values in different parameter groups is only supported for values of 0")
+                raise RuntimeError(f"Setting different lr values in different parameter groups "
+                                   "is only supported for values of 0. To scale the learning "
+                                   "rate differently for each layer, set the 'layer_scale' value instead.")
 
             for p in group['params']:
                 if p.grad is None:
@@ -172,14 +181,14 @@ class DAdaptAdam(torch.optim.Optimizer):
 
                 if group_lr > 0.0:
                     denom = exp_avg_sq.sqrt().add_(eps)
-                    numerator_acum += dlr * torch.dot(grad.flatten(), s.div(denom).flatten()).item()
+                    numerator_acum += r * dlr * torch.dot(grad.flatten(), s.div(denom).flatten()).item()
 
                     # Adam EMA updates
-                    exp_avg.mul_(beta1).add_(grad, alpha=dlr*(1-beta1))
+                    exp_avg.mul_(beta1).add_(grad, alpha=r*dlr*(1-beta1))
                     exp_avg_sq.mul_(beta2).addcmul_(grad, grad, value=1-beta2)
 
                     s.mul_(sqrt_beta2).add_(grad, alpha=dlr*(1-sqrt_beta2))
-                    sk_l1 += s.abs().sum().item()
+                    sk_l1 += r * s.abs().sum().item()
 
             ######
 

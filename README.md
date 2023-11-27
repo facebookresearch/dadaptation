@@ -28,14 +28,17 @@ year = {2023}
 The provided Pytorch Optimizer classes are drop-in replacements, either copy into your project or use via pip with dadaptation.DAdaptSGD,  dadaptation.DAdaptAdam or dadaptation.DAdaptAdaGrad.
 
  - **Set the LR parameter to 1.0**. This parameter is not ignored. Setting it larger to smaller will directly scale up or down the D-Adapted learning rate estimate.
+ - Different per-layer learning rates can be achieved by setting the layer_scale value in each parameter-group. It defaults to 1.0, and scales each layer's learning rate relative to the other layers.
  - **Use the same learning rate scheduler you would normally use on the problem.**
  - The Adam variant supports AdamW style weight decay, just set decouple=True. It is not turned on by default, so if you are replacing your adam implementation, make sure you use decoupled if necessary.
  - It may be necessary to use larger weight decay than you would normally use, try a factor of 2 or 4 bigger if you see overfitting. D-Adaptation uses larger learning rates than people typically hand-choose, in some cases that requires more decay.
  - Use the log_every setting to see the learning rate being used (d*lr) and the current D bound.
  - Only the AdaGrad version supports sparse gradients. It does not adapt as efficiently as the other variants and should be considered experimental.
- - Parameter-group level LR values are not fully supported. The optimizer only supports setting zero LR for some groups in order to do fine-tuning on parts of a model.
  
 ## Change Log
+
+### Version 3.2
+ - Added support for layer-wise scaling to DAdaptAdam.
 
 ### Version 3.0
  - Major improvements to DAdaptAdam, improving the performance particularly on Transformer models. This variant may behave differently in practice. The old version is availiable under experimental/d_adapt_adam_preprint if you wish to continue to use it.
