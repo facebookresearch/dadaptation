@@ -122,8 +122,7 @@ class DAdaptLion(Optimizer):
                 s.mul_(sqrt_beta2).add_(update, alpha=(1-sqrt_beta2)*dlr)
                 
                 sk_l1 += s.abs().sum().item()
-
-        numerator_weighted = sqrt_beta2*numerator_weighted + (1-sqrt_beta2)*numerator_acum
+        
         d_hat = d
         
         # if we have not done any progres, return
@@ -134,13 +133,13 @@ class DAdaptLion(Optimizer):
         if lr > 0.0:
             if fsdp_in_use:
                 dist_tensor = torch.zeros(2).cuda()
-                dist_tensor[0] = numerator_weighted
+                dist_tensor[0] = numerator_acum
                 dist_tensor[1] = sk_l1
                 dist.all_reduce(dist_tensor, op=dist.ReduceOp.SUM)
-                global_numerator_weighted = dist_tensor[0]
+                global_numerator_weighted = sqrt_beta2*numerator_weighted + (1-sqrt_beta2)*dist_tensor[0]
                 global_sk_l1 = dist_tensor[1]
             else:
-                global_numerator_weighted = numerator_weighted
+                global_numerator_weighted = sqrt_beta2*numerator_weighted + (1-sqrt_beta2)*numerator_acum
                 global_sk_l1 = sk_l1
 
 
