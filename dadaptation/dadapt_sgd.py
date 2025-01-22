@@ -155,18 +155,18 @@ class DAdaptSGD(torch.optim.Optimizer):
 
         d_hat = d
 
-        if lr > 0.0:
-            if fsdp_in_use:
-                dist_tensor = torch.zeros(2).cuda()
-                dist_tensor[0] = sk_sq
-                dist_tensor[1] = delta_numerator_weighted
-                dist.all_reduce(dist_tensor, op=dist.ReduceOp.SUM)
-                global_sk_sq = dist_tensor[0]
-                global_numerator_weighted = numerator_weighted + dist_tensor[1]
-            else:
-                global_sk_sq = sk_sq
-                global_numerator_weighted = numerator_weighted + delta_numerator_weighted
+        if fsdp_in_use:
+            dist_tensor = torch.zeros(2).cuda()
+            dist_tensor[0] = sk_sq
+            dist_tensor[1] = delta_numerator_weighted
+            dist.all_reduce(dist_tensor, op=dist.ReduceOp.SUM)
+            global_sk_sq = dist_tensor[0]
+            global_numerator_weighted = numerator_weighted + dist_tensor[1]
+        else:
+            global_sk_sq = sk_sq
+            global_numerator_weighted = numerator_weighted + delta_numerator_weighted
 
+        if lr > 0.0:
             d_hat = 2*global_numerator_weighted/math.sqrt(global_sk_sq)
             d = max(d, min(d_hat, d*growth_rate))
 
@@ -180,7 +180,7 @@ class DAdaptSGD(torch.optim.Optimizer):
             logging.info(f"(r={self.rank},k={k}) dlr: {dlr} d_hat: {d_hat}, d: {d}. sk_norm={math.sqrt(global_sk_sq)} numerator_weighted={global_numerator_weighted} g0_norm={g0_norm}")
 
         for group in self.param_groups:
-            group['numerator_weighted'] = numerator_weighted
+            group['numerator_weighted'] = global_numerator_weighted
             group['d'] = d
             group['g0_norm'] = g0_norm
             ######################################
