@@ -192,7 +192,6 @@ class DAdaptAdam(torch.optim.Optimizer):
 
             ######
 
-        numerator_weighted = sqrt_beta2*numerator_weighted + (1-sqrt_beta2)*numerator_acum
         d_hat = d
 
         # if we have not done any progres, return
@@ -200,19 +199,18 @@ class DAdaptAdam(torch.optim.Optimizer):
         if sk_l1 == 0:
             return loss
         
+        if fsdp_in_use:
+            dist_tensor = torch.zeros(2).cuda()
+            dist_tensor[0] = numerator_acum
+            dist_tensor[1] = sk_l1
+            dist.all_reduce(dist_tensor, op=dist.ReduceOp.SUM)
+            global_numerator_weighted = sqrt_beta2*numerator_weighted + (1-sqrt_beta2)*dist_tensor[0]
+            global_sk_l1 = dist_tensor[1]
+        else:
+            global_numerator_weighted = sqrt_beta2*numerator_weighted + (1-sqrt_beta2)*numerator_acum
+            global_sk_l1 = sk_l1
+
         if lr > 0.0:
-            if fsdp_in_use:
-                dist_tensor = torch.zeros(2).cuda()
-                dist_tensor[0] = numerator_weighted
-                dist_tensor[1] = sk_l1
-                dist.all_reduce(dist_tensor, op=dist.ReduceOp.SUM)
-                global_numerator_weighted = dist_tensor[0]
-                global_sk_l1 = dist_tensor[1]
-            else:
-                global_numerator_weighted = numerator_weighted
-                global_sk_l1 = sk_l1
-
-
             d_hat = global_numerator_weighted/((1-sqrt_beta2)*global_sk_l1)
             d = max(d, min(d_hat, d*growth_rate))
 
@@ -220,7 +218,7 @@ class DAdaptAdam(torch.optim.Optimizer):
             logging.info(f"lr: {lr} dlr: {dlr} d_hat: {d_hat}, d: {d}. sk_l1={global_sk_l1:1.1e} numerator_weighted={global_numerator_weighted:1.1e}")
 
         for group in self.param_groups:
-            group['numerator_weighted'] = numerator_weighted
+            group['numerator_weighted'] = global_numerator_weighted
             group['d'] = d
 
             decay = group['weight_decay']
